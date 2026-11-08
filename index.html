@@ -1,0 +1,474 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<title>Crosscheck Slate</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@600;800&family=Public+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+
+<style>
+/* Layout: one-column scouting ledger. Query bar, filter row, interpreted-filter chips, results grouped by date like a lineup card. */
+:root{
+  --bg:#eef2f0; --surface:#ffffff; --ink:#14211c; --muted:#5b6a64; --line:#d3dcd8;
+  --accent:#1d6a4a; --accent-ink:#ffffff; --accent-soft:#dcece4;
+  --tba:#8a5a00; --tba-soft:#fbefd6; --link:#1d5a8a; --juco:#6a3d8f;
+  --f-display:"Big Shoulders Display","Oswald","Arial Narrow",Impact,sans-serif;
+  --f-body:"Public Sans",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --f-mono:"IBM Plex Mono",ui-monospace,SFMono-Regular,Menlo,monospace;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#0f1714; --surface:#16211d; --ink:#e4ece8; --muted:#94a59e; --line:#2a3a33;
+  --accent:#4fb88a; --accent-ink:#06120d; --accent-soft:#1b3329;
+  --tba:#f0bf5c; --tba-soft:#33280f; --link:#7db8e8; --juco:#c9a3ea; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0f1714; --surface:#16211d; --ink:#e4ece8; --muted:#94a59e; --line:#2a3a33;
+  --accent:#4fb88a; --accent-ink:#06120d; --accent-soft:#1b3329;
+  --tba:#f0bf5c; --tba-soft:#33280f; --link:#7db8e8; --juco:#c9a3ea; color-scheme:dark}
+
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:15px;line-height:1.45;margin:0}
+.wrap{max-width:780px;margin:0 auto;padding-inline:16px;padding-block:20px 48px;display:flex;flex-direction:column;gap:16px}
+header{display:flex;flex-direction:column;gap:4px}
+.eyebrow{font-family:var(--f-mono);font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted)}
+h1{font-family:var(--f-display);font-weight:800;font-size:clamp(34px,8vw,48px);line-height:.95;margin:0;letter-spacing:.01em;text-transform:uppercase;text-wrap:balance}
+.sub{color:var(--muted);margin:2px 0 0;max-width:62ch}
+
+form.q{display:flex;gap:8px}
+form.q input{flex:1;min-width:0;font:inherit;font-size:16px;padding:12px 14px;border:1.5px solid var(--line);border-radius:10px;background:var(--surface);color:var(--ink)}
+form.q input:focus-visible{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft)}
+form.q button{font:inherit;font-weight:700;padding:0 18px;border:0;border-radius:10px;background:var(--accent);color:var(--accent-ink);cursor:pointer}
+button:focus-visible,a:focus-visible,select:focus-visible,input:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+
+.tries{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+.tries span{font-size:12px;color:var(--muted);margin-right:2px}
+.try{font:inherit;font-size:13px;padding:5px 10px;border-radius:999px;border:1px solid var(--line);background:transparent;color:var(--ink);cursor:pointer}
+.try:hover{border-color:var(--accent);color:var(--accent)}
+
+.filters{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:8px}
+.filters label{display:flex;flex-direction:column;gap:3px;font-size:11px;font-family:var(--f-mono);text-transform:uppercase;letter-spacing:.08em;color:var(--muted);min-width:0}
+.filters select,.filters input{font:inherit;font-size:14px;padding:8px;border:1px solid var(--line);border-radius:8px;background:var(--surface);color:var(--ink);min-width:0;width:100%}
+@media (max-width:720px){.filters{grid-template-columns:repeat(3,minmax(0,1fr))}}
+@media (max-width:440px){.filters{grid-template-columns:repeat(2,minmax(0,1fr))}}
+
+.reading{display:flex;flex-wrap:wrap;gap:6px;align-items:center;min-height:28px}
+.chip{display:inline-flex;align-items:center;gap:6px;font-size:13px;padding:4px 6px 4px 10px;border-radius:999px;background:var(--accent-soft);color:var(--ink)}
+.chip b{font-weight:600}
+.chip button{font:inherit;font-size:12px;border:0;background:transparent;color:var(--muted);cursor:pointer;padding:2px 4px;border-radius:999px}
+.chip button:hover{color:var(--ink)}
+.chip .swap{color:var(--link);text-decoration:underline}
+.clear{font:inherit;font-size:13px;border:0;background:none;color:var(--link);cursor:pointer;text-decoration:underline}
+.count{font-family:var(--f-mono);font-size:12px;color:var(--muted);margin-left:auto}
+
+.results{display:flex;flex-direction:column;gap:20px}
+.day h2{font-family:var(--f-display);font-weight:600;font-size:22px;letter-spacing:.02em;text-transform:uppercase;margin:0 0 6px;padding-bottom:6px;border-bottom:2px solid var(--ink);display:flex;justify-content:space-between;gap:8px;align-items:baseline}
+.day h2 small{font-family:var(--f-mono);font-size:12px;font-weight:400;color:var(--muted);letter-spacing:0;text-transform:none}
+.row{display:grid;grid-template-columns:96px minmax(0,1fr);gap:12px;padding:11px 0;border-bottom:1px solid var(--line)}
+.row:last-child{border-bottom:0}
+.when{font-family:var(--f-mono);font-size:13px;font-variant-numeric:tabular-nums;color:var(--muted);display:flex;flex-direction:column;gap:2px;min-width:0;overflow-wrap:anywhere}
+.when strong{color:var(--ink);font-weight:600;font-size:14px}
+.what{display:flex;flex-direction:column;gap:3px;min-width:0}
+.match{font-weight:700;font-size:16px;line-height:1.3}
+.where{font-size:14px;color:var(--muted)}
+.where .st{font-family:var(--f-mono);font-size:12px;color:var(--ink);border:1px solid var(--line);border-radius:4px;padding:0 4px;margin-left:4px}
+.note{font-size:13px;color:var(--muted)}
+.tags{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-top:2px}
+.tag{font-family:var(--f-mono);font-size:11px;letter-spacing:.04em;text-transform:uppercase;padding:2px 7px;border-radius:4px;border:1px solid var(--line);color:var(--muted)}
+.tag.tba{background:var(--tba-soft);color:var(--tba);border-color:transparent}
+.tag.lvl{color:var(--accent);border-color:var(--accent)}
+.tag.lvl.juco{color:var(--juco);border-color:var(--juco)}
+.src{font-size:12px;color:var(--link);text-decoration:none}
+.src:hover{text-decoration:underline}
+@media (max-width:480px){.row{grid-template-columns:1fr;gap:4px}.when{flex-direction:row;flex-wrap:wrap;gap:8px;align-items:baseline}}
+.more{font:inherit;font-weight:600;padding:10px 14px;border-radius:10px;border:1px solid var(--line);background:var(--surface);color:var(--ink);cursor:pointer;align-self:flex-start}
+
+.empty{background:var(--surface);border:1px dashed var(--line);border-radius:12px;padding:18px;display:flex;flex-direction:column;gap:8px}
+.empty h3{margin:0;font-size:16px}
+.empty p{margin:0;color:var(--muted);max-width:62ch}
+.empty .next{display:flex;flex-direction:column;gap:4px;margin-top:4px}
+.empty .next button{font:inherit;text-align:left;border:0;background:none;color:var(--link);cursor:pointer;padding:2px 0;text-decoration:underline}
+
+footer{font-size:13px;color:var(--muted);border-top:1px solid var(--line);padding-top:14px;display:flex;flex-direction:column;gap:8px}
+footer p{margin:0;max-width:66ch}
+.stats{display:flex;flex-wrap:wrap;gap:6px 18px;font-family:var(--f-mono);font-size:12px;color:var(--ink)}
+.stats span b{font-weight:600}
+details.loaded summary{cursor:pointer;color:var(--link)}
+details.loaded p{margin-top:6px}
+@media (prefers-reduced-motion:no-preference){.row{animation:in .18s ease-out both}@keyframes in{from{opacity:.4}to{opacity:1}}}
+.tabs{display:flex;gap:4px;border-bottom:2px solid var(--line)}
+.tabs a{white-space:nowrap;font-family:var(--f-display);font-weight:600;font-size:18px;letter-spacing:.03em;text-transform:uppercase;padding:8px 14px 6px;color:var(--muted);text-decoration:none;border-bottom:3px solid transparent;margin-bottom:-2px}
+.tabs a[aria-current=page]{color:var(--ink);border-bottom-color:var(--accent)}
+.tabs a:hover{color:var(--ink)}
+.view{display:flex;flex-direction:column;gap:16px}
+.roster{display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:8px}
+.school{font:inherit;text-align:left;display:flex;flex-direction:column;gap:2px;padding:10px 12px;border:1px solid var(--line);border-radius:10px;background:var(--surface);color:var(--ink);cursor:pointer;min-width:0}
+.school:hover{border-color:var(--accent)}
+.school[aria-pressed=true]{border-color:var(--accent);box-shadow:inset 0 0 0 1px var(--accent);background:var(--accent-soft)}
+.school b{font-weight:700;font-size:15px;line-height:1.25}
+.school .pl{font-size:12px;color:var(--muted)}
+.school .ct{font-family:var(--f-mono);font-size:12px;color:var(--accent)}
+.school .ct.none{color:var(--muted)}
+.school .lv{font-family:var(--f-mono);font-size:10px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+.ranges{display:flex;flex-wrap:wrap;gap:6px}
+.ranges .try[aria-pressed=true]{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.ranges .vs{margin-left:auto;font-weight:600;border-color:var(--accent);color:var(--accent)}
+@media (max-width:520px){.ranges .vs{margin-left:0}}
+.tag.rel{background:var(--accent);color:var(--accent-ink);border-color:transparent}
+.relnote{font-size:13px;color:var(--muted);margin:0;max-width:66ch}
+</style>
+
+<div class="wrap">
+  <header>
+    <div class="eyebrow">2027 season · NCAA &amp; Junior College</div>
+    <h1>Crosscheck Slate</h1>
+    <p class="sub">Ask in plain words, like “Georgia this weekend,” “SEC games in Florida in April” or “Vanderbilt March 5-7.” Games are added as programs post their 2027 schedules.</p>
+  </header>
+
+  <nav class="tabs" aria-label="Views"><a href="#all" id="tab-all">All games</a><a href="#reliance" id="tab-rel">Reliance schools</a></nav>
+
+  <div class="view" id="view-all">
+  <form class="q" id="qform" autocomplete="off">
+    <input id="q" type="search" placeholder="Georgia this weekend" aria-label="Search games">
+    <button type="submit">Find</button>
+  </form>
+
+  <div class="tries" id="tries"><span>Try</span></div>
+
+  <div class="filters">
+    <label for="f-state">State<select id="f-state"><option value="">Any</option></select></label>
+    <label for="f-level">Level<select id="f-level"><option value="">Any</option><option value="D1">NCAA D1</option><option value="D2">NCAA D2</option><option value="JUCO">JUCO</option></select></label>
+    <label for="f-conf">Conference<select id="f-conf"><option value="">Any</option></select></label>
+    <label for="f-team">Team<input id="f-team" list="teamlist" placeholder="Any"></label>
+    <label for="f-from">From<input id="f-from" type="date"></label>
+    <label for="f-to">To<input id="f-to" type="date"></label>
+  </div>
+  <datalist id="teamlist"></datalist>
+
+  <div class="reading" id="reading"></div>
+  <div class="results" id="results"></div>
+  </div>
+
+  <div class="view" id="view-rel" hidden>
+    <p class="sub" style="margin:0">Every listed 2027 game for schools where Reliance has players. Pick a school to see only its games, or leave all selected.</p>
+    <div class="roster" id="roster"></div>
+    <div class="ranges" id="rel-ranges"></div>
+    <div class="reading" id="rel-reading"></div>
+    <div class="results" id="rel-results"></div>
+    <p class="relnote" id="rel-note"></p>
+  </div>
+
+  <footer>
+    <div class="stats" id="stats"></div>
+    <p id="updated">Loading schedule data…</p>
+    <details class="loaded" id="loadedbox"><summary>Programs with 2027 schedules loaded</summary><p id="loadedlist"></p></details>
+    <p>Each listing comes from a posted schedule and links to it. A weekend series shows as one listing. Rows marked “TBA” are tournament dates where the opponent isn’t announced yet. Times are local to the ballpark when listed.</p>
+  </footer>
+</div>
+
+<script>
+const STATES=[["AL","Alabama"],["AK","Alaska"],["AZ","Arizona"],["AR","Arkansas"],["CA","California"],["CO","Colorado"],["CT","Connecticut"],["DE","Delaware"],["FL","Florida"],["GA","Georgia"],["HI","Hawaii"],["ID","Idaho"],["IL","Illinois"],["IN","Indiana"],["IA","Iowa"],["KS","Kansas"],["KY","Kentucky"],["LA","Louisiana"],["ME","Maine"],["MD","Maryland"],["MA","Massachusetts"],["MI","Michigan"],["MN","Minnesota"],["MS","Mississippi"],["MO","Missouri"],["MT","Montana"],["NE","Nebraska"],["NV","Nevada"],["NH","New Hampshire"],["NJ","New Jersey"],["NM","New Mexico"],["NY","New York"],["NC","North Carolina"],["ND","North Dakota"],["OH","Ohio"],["OK","Oklahoma"],["OR","Oregon"],["PA","Pennsylvania"],["RI","Rhode Island"],["SC","South Carolina"],["SD","South Dakota"],["TN","Tennessee"],["TX","Texas"],["UT","Utah"],["VT","Vermont"],["VA","Virginia"],["WA","Washington"],["WV","West Virginia"],["WI","Wisconsin"],["WY","Wyoming"],["DC","District of Columbia"],["INTL","Outside the U.S."]];
+const ST_NAME=Object.fromEntries(STATES);
+const ALIASES={"gt":"Georgia Tech","yellow jackets":"Georgia Tech","unc":"North Carolina","tar heels":"North Carolina","fsu":"Florida State","noles":"Florida State","seminoles":"Florida State","uva":"Virginia","hoos":"Virginia","wahoos":"Virginia","vt":"Virginia Tech","hokies":"Virginia Tech","bc":"Boston College","cal":"California","nd":"Notre Dame","wake":"Wake Forest","deacs":"Wake Forest","canes":"Miami","hurricanes":"Miami","wolfpack":"NC State","ncsu":"NC State","uga":"Georgia","dawgs":"Georgia","bulldogs":"Georgia","uf":"Florida","gators":"Florida","ccu":"Coastal Carolina","coastal":"Coastal Carolina","chants":"Coastal Carolina","vols":"Tennessee","vandy":"Vanderbilt","commodores":"Vanderbilt","bama":"Alabama","tide":"Alabama","hogs":"Arkansas","razorbacks":"Arkansas","aggies":"Texas A&M","tamu":"Texas A&M","longhorns":"Texas","horns":"Texas","sooners":"Oklahoma","okstate":"Oklahoma State","osu cowboys":"Oklahoma State","pokes":"Oklahoma State","gamecocks":"South Carolina","usc gamecocks":"South Carolina","mizzou":"Missouri","msu bulldogs":"Mississippi State","miss state":"Mississippi State","rebels":"Ole Miss","wildcats":"Kentucky","uk":"Kentucky","ttu":"Texas Tech","red raiders":"Texas Tech","dbu":"Dallas Baptist","usf":"South Florida","ucf":"UCF","byu":"BYU","wvu":"West Virginia","ksu":"Kansas State","k-state":"Kansas State","asu":"Arizona State","sun devils":"Arizona State","uconn":"UConn","huskers":"Nebraska","osu beavers":"Oregon State","beavers":"Oregon State","ecu":"East Carolina","pirates":"East Carolina","ksu owls":"Kennesaw State","kennesaw":"Kennesaw State","gsu":"Georgia State","georgia southern":"Georgia Southern","mercer":"Mercer"};
+const CONFS={"acc":"ACC","sec":"SEC","big 12":"Big 12","big12":"Big 12","big ten":"Big Ten","big 10":"Big Ten","b1g":"Big Ten","sun belt":"Sun Belt","american":"American","aac":"American","pac-12":"Pac-12","pac 12":"Pac-12","pac12":"Pac-12","conference usa":"Conference USA","c-usa":"Conference USA","cusa":"Conference USA","socon":"SoCon","southern conference":"SoCon","asun":"ASUN","atlantic sun":"ASUN","big south":"Big South","caa":"CAA","colonial":"CAA","big east":"Big East","atlantic 10":"Atlantic 10","a-10":"Atlantic 10","a10":"Atlantic 10","ivy":"Ivy League","ivy league":"Ivy League","mountain west":"Mountain West","mwc":"Mountain West","wcc":"WCC","big west":"Big West","southland":"Southland","wac":"WAC","mac":"MAC","missouri valley":"Missouri Valley","mvc":"Missouri Valley","america east":"America East","maac":"MAAC","nec":"NEC","patriot league":"Patriot League","horizon league":"Horizon League","summit league":"Summit League","swac":"SWAC","meac":"MEAC","ohio valley":"Ohio Valley","ovc":"Ohio Valley","gcaa":"GCAA"};
+const MONTHS=["january","february","march","april","may","june","july","august","september","october","november","december"];
+const MON_SHORT={jan:0,feb:1,mar:2,apr:3,may:4,jun:5,jul:6,aug:7,sep:8,sept:8,oct:9,nov:10,dec:11};
+const OPENING=["2027-02-19","2027-02-22"];
+const STOP=new Set("show me all the games game any in at on for of around across near this next week weekend find list what whats what's are is there please a an and with vs versus who playing play plays college baseball schedule schedules ncaa".split(" "));
+const PAGE=150;
+
+let GAMES=[], META=null, HOSTS={d1:[],juco:[]}, TEAMCONF={}, LOAD_STATE="loading", SHOWN=PAGE;
+const blank=()=>({state:"",team:"",conf:"",from:"",to:"",level:"",text:"",ambig:null,label:""});
+let F=blank();
+
+/* ---------- dates ---------- */
+const pad=n=>String(n).padStart(2,"0");
+const iso=d=>d.getFullYear()+"-"+pad(d.getMonth()+1)+"-"+pad(d.getDate());
+const addDays=(d,n)=>{const x=new Date(d);x.setDate(x.getDate()+n);return x};
+const parseIso=s=>{const[y,m,d]=s.split("-").map(Number);return new Date(y,m-1,d)};
+const today0=()=>{const t=new Date();return new Date(t.getFullYear(),t.getMonth(),t.getDate())};
+function weekendOf(base){const dow=base.getDay();
+  if(dow===0)return[addDays(base,-2),base];
+  if(dow===6)return[addDays(base,-1),addDays(base,1)];
+  const fri=addDays(base,5-dow);return[fri,addDays(fri,2)];}
+function monthYear(mi){const t=today0();return mi>=t.getMonth()?t.getFullYear():t.getFullYear()+1}
+const fmtDay=s=>parseIso(s).toLocaleDateString("en-US",{weekday:"short",month:"short",day:"numeric"});
+const fmtShort=s=>parseIso(s).toLocaleDateString("en-US",{month:"short",day:"numeric"});
+const fmtRange=(a,b)=>a===b?fmtDay(a):fmtShort(a)+" – "+fmtShort(b);
+const esc=s=>s.replace(/[.*+?^${}()|[\]\\]/g,"\\$&");
+
+/* ---------- query parsing ---------- */
+function allTeams(){const s=new Set();GAMES.forEach(g=>g.teams.forEach(t=>s.add(t)));return[...s]}
+function parseQuery(raw){
+  const out=blank();
+  let q=" "+raw.toLowerCase().replace(/[’']/g,"'").replace(/[^a-z0-9/'&\-. ]/g," ").replace(/\s+/g," ")+" ";
+  const eat=re=>{q=q.replace(re," ")};
+  const t=today0(); let m;
+
+  if(/\b(juco|jucos|junior colleges?|jc|njcaa)\b/.test(q)){out.level="JUCO";eat(/\b(juco|jucos|junior colleges?|jc|njcaa)\b/g)}
+  else if(/\b(d1|d-1|division i|division 1)\b/.test(q)){out.level="D1";eat(/\b(d1|d-1|division i|division 1)\b/g)}
+  else if(/\b(d2|d-2|division ii|division 2)\b/.test(q)){out.level="D2";eat(/\b(d2|d-2|division ii|division 2)\b/g)}
+
+  if(/\bopening (day|weekend)\b/.test(q)){[out.from,out.to]=OPENING;out.label="Opening weekend";eat(/\bopening (day|weekend)\b/g)}
+  else if(/\bnext weekend\b/.test(q)){const[a,b]=weekendOf(addDays(t,7));out.from=iso(a);out.to=iso(b);out.label="Next weekend";eat(/\bnext weekend\b/g)}
+  else if(/\b(this )?weekend\b/.test(q)){const[a,b]=weekendOf(t);out.from=iso(a);out.to=iso(b);out.label="This weekend";eat(/\b(this )?weekend\b/g)}
+  else if(/\bnext week\b/.test(q)){const mon=addDays(t,((8-t.getDay())%7)||7);out.from=iso(mon);out.to=iso(addDays(mon,6));out.label="Next week";eat(/\bnext week\b/g)}
+  else if(/\bthis week\b/.test(q)){out.from=iso(t);out.to=iso(addDays(t,(7-t.getDay())%7));out.label="This week";eat(/\bthis week\b/g)}
+  else if(/\btoday\b/.test(q)){out.from=out.to=iso(t);out.label="Today";eat(/\btoday\b/g)}
+  else if(/\btomorrow\b/.test(q)){out.from=out.to=iso(addDays(t,1));out.label="Tomorrow";eat(/\btomorrow\b/g)}
+  else if((m=q.match(/\b(\d{1,2})\/(\d{1,2})(?:\s*-\s*(?:(\d{1,2})\/)?(\d{1,2}))?\b/))){
+    const mi=+m[1]-1;out.from=monthYear(mi)+"-"+pad(mi+1)+"-"+pad(+m[2]);
+    const mi2=m[3]?+m[3]-1:mi;out.to=m[4]?monthYear(mi2)+"-"+pad(mi2+1)+"-"+pad(+m[4]):out.from;eat(new RegExp(esc(m[0]),"g"));
+  }else{
+    const monRe=/\b(january|february|march|april|may|june|july|august|september|october|november|december|jan|feb|mar|apr|jun|jul|aug|sept|sep|oct|nov|dec)\b\.?(?:\s+(\d{1,2})(?:\s*-\s*(\d{1,2}))?)?/;
+    if((m=q.match(monRe))){
+      let mi=MONTHS.indexOf(m[1]);if(mi<0)mi=MON_SHORT[m[1]];
+      const y=monthYear(mi);
+      if(m[2]){out.from=y+"-"+pad(mi+1)+"-"+pad(+m[2]);out.to=m[3]?y+"-"+pad(mi+1)+"-"+pad(+m[3]):out.from}
+      else{out.from=y+"-"+pad(mi+1)+"-01";out.to=iso(new Date(y,mi+1,0));out.label=MONTHS[mi][0].toUpperCase()+MONTHS[mi].slice(1)+" "+y}
+      eat(new RegExp(esc(m[0]),"g"));
+    }
+  }
+
+  // conference
+  for(const k of Object.keys(CONFS).sort((a,b)=>b.length-a.length)){
+    const re=new RegExp("(^|\\s)"+esc(k)+"(\\s|$)");
+    if(re.test(q)){out.conf=CONFS[k];eat(re);break}
+  }
+
+  // state with a preposition ("in georgia", "games in GA")
+  const stEntries=STATES.map(([a,n])=>[a,n.toLowerCase()]).sort((x,y)=>y[1].length-x[1].length);
+  for(const[a,n]of stEntries){const re=new RegExp("\\b(in|around|across|within) (the state of )?"+esc(n)+"\\b");if(re.test(q)){out.state=a;eat(re);break}}
+  if(!out.state){for(const[a]of STATES){if(a.length!==2)continue;const re=new RegExp("\\b(in|around) "+a.toLowerCase()+"\\b");if(re.test(q)){out.state=a;eat(re);break}}}
+  if(!out.state){const am=raw.match(/\b([A-Z]{2})\b/g);if(am){for(const a of am){if(ST_NAME[a]&&!["GT","BC","ND","UF","VT","IN","OR","ME","OK","HI","UK"].includes(a)){out.state=a;eat(new RegExp("\\b"+a.toLowerCase()+"\\b"));break}}}}
+
+  // teams: aliases and full names, longest first. Bare state names (e.g. "georgia") wait for the state pass.
+  const stateNames=new Set(STATES.map(([,n])=>n.toLowerCase()));
+  const teams=allTeams();
+  const keys=[...new Set([...Object.keys(ALIASES),...teams.map(x=>x.toLowerCase())])].sort((a,b)=>b.length-a.length);
+  for(const k of keys){
+    if(stateNames.has(k))continue;
+    const re=new RegExp("(^|\\s)"+esc(k)+"(\\s|$)");
+    if(re.test(q)){out.team=ALIASES[k]||teams.find(x=>x.toLowerCase()===k);eat(re);break}
+  }
+  // bare state name: treat as the state, offer the school as an alternative
+  if(!out.state){for(const[a,n]of stEntries){const re=new RegExp("\\b"+esc(n)+"\\b");if(re.test(q)){
+    out.state=a;eat(re);
+    const school=teams.find(x=>x.toLowerCase()===n);
+    if(school&&!out.team)out.ambig={team:school,state:a};
+    break}}}
+  out.text=q.split(" ").filter(w=>w&&!STOP.has(w)&&w.length>2).join(" ");
+  return out;
+}
+
+/* ---------- data shaping ---------- */
+function flatten(){
+  const rows=[];TEAMCONF={};
+  for(const lvlKey of ["d1","juco"]){
+    for(const h of HOSTS[lvlKey]){if(h.kind==="school"&&h.conf)TEAMCONF[h.name]=h.conf}
+  }
+  for(const lvlKey of ["d1","juco"]){
+    for(const h of HOSTS[lvlKey]){
+      const srcs=h.srcs||[];
+      for(const g of (h.games||[])){
+        if(!g.s)continue;
+        let teams,title,home=null;
+        if(g.a){teams=[g.a,g.h];title=g.a+" at "+g.h;home=g.h}
+        else if(g.title){teams=[];title=g.title}
+        else{teams=g.t||[];title=teams.length===2?teams[0]+" vs. "+teams[1]:(teams[0]||"")+(g.ev?" · "+g.ev.replace(/\s*\((opponents?|field) TBA\)/i,""):"")}
+        const level=g.lvl||(h.kind==="school"?(h.level||(lvlKey==="juco"?"JUCO":"D1")):(lvlKey==="juco"?"JUCO":"D1"));
+        const confs=[...new Set(teams.map(t=>TEAMCONF[t]).filter(Boolean))];
+        const s=srcs[g.src]||null;
+        rows.push({start:g.s,end:g.e||g.s,title,teams,home,venue:h.venue||null,city:h.city||"",state:h.state||"",country:h.country||null,
+          level,confs,n:g.n||1,time:g.tm||null,tba:!!g.tba,event:g.a?null:(g.title?null:(teams.length===2?null:null)),note:g.note||null,
+          neutral:h.kind==="site",src:s});
+      }
+    }
+  }
+  return rows;
+}
+
+/* ---------- filtering ---------- */
+function matches(g,f,ignoreDates){
+  if(f.level&&g.level!==f.level)return false;
+  if(f.state&&g.state!==f.state)return false;
+  if(f.conf&&!g.confs.includes(f.conf))return false;
+  if(f.team&&!g.teams.some(t=>t.toLowerCase()===f.team.toLowerCase()))return false;
+  if(!ignoreDates){if(f.from&&g.end<f.from)return false;if(f.to&&g.start>f.to)return false}
+  if(f.text){const hay=[g.title,g.venue,g.city,ST_NAME[g.state],g.teams.join(" "),g.note,g.country].join(" ").toLowerCase();
+    if(!f.text.split(" ").every(w=>hay.includes(w)))return false}
+  return true;
+}
+
+/* ---------- render ---------- */
+const $=id=>document.getElementById(id);
+function el(tag,attrs,...kids){const e=document.createElement(tag);for(const k in attrs||{}){if(k==="class")e.className=attrs[k];else if(k.startsWith("on"))e.addEventListener(k.slice(2),attrs[k]);else e.setAttribute(k,attrs[k])}kids.flat().forEach(k=>{if(k!=null&&k!==false)e.append(k.nodeType?k:document.createTextNode(k))});return e}
+
+function syncControls(){$("f-state").value=F.state;$("f-level").value=F.level;$("f-conf").value=F.conf;$("f-team").value=F.team;$("f-from").value=F.from;$("f-to").value=F.to}
+function fillControls(){
+  const used=new Set(GAMES.map(g=>g.state));
+  const ss=$("f-state");ss.length=1;
+  STATES.filter(([a])=>used.has(a)).sort((x,y)=>x[1].localeCompare(y[1])).forEach(([a,n])=>ss.append(el("option",{value:a},n)));
+  if(F.state&&!used.has(F.state))ss.append(el("option",{value:F.state},ST_NAME[F.state]||F.state));
+  const cs=$("f-conf");cs.length=1;
+  const confs=[...new Set(Object.values(TEAMCONF))].sort();
+  confs.forEach(c=>cs.append(el("option",{value:c},c)));
+  if(F.conf&&!confs.includes(F.conf))cs.append(el("option",{value:F.conf},F.conf));
+  const dl=$("teamlist");dl.textContent="";allTeams().sort().forEach(t=>dl.append(el("option",{value:t})));
+}
+
+function renderReading(n){
+  const r=$("reading");r.textContent="";
+  const chip=(label,val,key,extra)=>el("span",{class:"chip"},label,": ",el("b",{},val),extra||null,
+    el("button",{type:"button","aria-label":"Remove "+label,onclick:()=>{if(key==="from"){F.from="";F.to="";F.label=""}else F[key]="";if(key==="state"||key==="team")F.ambig=null;update()}},"✕"));
+  if(F.from||F.to)r.append(chip("Dates",F.label?F.label+" ("+fmtRange(F.from,F.to||F.from)+")":fmtRange(F.from||F.to,F.to||F.from),"from"));
+  if(F.state){const swap=F.ambig?el("button",{type:"button",class:"swap",onclick:()=>{F.team=F.ambig.team;F.state="";F.ambig=null;update()}},"I meant "+F.ambig.team+" (team)"):null;
+    r.append(chip("State",ST_NAME[F.state]||F.state,"state",swap))}
+  if(F.team)r.append(chip("Team",F.team,"team"));
+  if(F.conf)r.append(chip("Conference",F.conf,"conf"));
+  if(F.level)r.append(chip("Level",{D1:"NCAA D1",D2:"NCAA D2",JUCO:"Junior college"}[F.level],"level"));
+  if(F.text)r.append(chip("Words",F.text,"text"));
+  if(r.childNodes.length)r.append(el("button",{type:"button",class:"clear",onclick:()=>{F=blank();$("q").value="";update()}},"Clear all"));
+  r.append(el("span",{class:"count"},n.toLocaleString()+(n===1?" listing":" listings")));
+}
+
+function row(g){
+  const tags=[];
+  tags.push(el("span",{class:"tag lvl"+(g.level==="JUCO"?" juco":"")},g.level==="JUCO"?"JUCO":"NCAA "+g.level));
+  g.confs.forEach(c=>tags.push(el("span",{class:"tag"},c)));
+  if(g.n>1)tags.push(el("span",{class:"tag"},g.n+"-game series"));
+  if(g.neutral)tags.push(el("span",{class:"tag"},"Neutral site"));
+  if(g.tba)tags.push(el("span",{class:"tag tba"},"Opponent TBA"));
+  if(g.src)tags.push(el("a",{class:"src",href:g.src.u,target:"_blank",rel:"noopener"},"Source: "+g.src.n));
+  const relHit=g.teams.filter(t=>RELSET.has(t));
+  if(relHit.length)tags.unshift(el("span",{class:"tag rel"},"Reliance · "+relHit.map(t=>RELLABEL[t]||t).join(", ")));
+  const multi=g.start!==g.end;
+  const whenTop=multi?fmtShort(g.start)+"–"+(parseIso(g.end).getMonth()===parseIso(g.start).getMonth()?parseIso(g.end).getDate():fmtShort(g.end)):parseIso(g.start).toLocaleDateString("en-US",{weekday:"short"});
+  const place=[g.venue,g.city,g.country].filter(Boolean).join(" · ");
+  return el("div",{class:"row"},
+    el("div",{class:"when"},el("strong",{},whenTop),g.time||"Time TBA"),
+    el("div",{class:"what"},
+      el("div",{class:"match"},g.title),
+      el("div",{class:"where"},place||"Site TBA",g.state&&g.state!=="INTL"?el("span",{class:"st"},g.state):null),
+      g.note?el("div",{class:"note"},g.note):null,
+      el("div",{class:"tags"},tags)));
+}
+
+function render(){
+  const list=GAMES.filter(g=>matches(g,F)).sort((a,b)=>a.start.localeCompare(b.start)||a.state.localeCompare(b.state)||a.title.localeCompare(b.title));
+  renderReading(list.length);
+  const box=$("results");box.textContent="";
+  if(!GAMES.length){
+    const msg={loading:["Loading schedules…","Pulling the latest posted 2027 games."],
+      off:["Couldn’t reach the schedule data","Please refresh the page in a minute."],
+      empty:["No games loaded yet","Schedules are added here as programs publish them."]}[LOAD_STATE];
+    box.append(el("div",{class:"empty"},el("h3",{},msg[0]),el("p",{},msg[1])));return;
+  }
+  if(!list.length){
+    const later=GAMES.filter(g=>matches(g,F,true)&&(!F.to||g.start>F.to)).sort((a,b)=>a.start.localeCompare(b.start)).slice(0,5);
+    const e=el("div",{class:"empty"},el("h3",{},"Nothing on the slate for that"),
+      el("p",{},(F.from&&F.to&&F.to<"2027-02-01"?"The 2027 season opens Feb. 19. ":"")+"Many 2027 schedules aren’t posted yet, so this list grows each week."));
+    if(later.length){e.append(el("p",{},"Next matching dates:"));
+      e.append(el("div",{class:"next"},later.map(g=>el("button",{type:"button",onclick:()=>{F.from=g.start;F.to=g.end;F.label="";update()}},fmtRange(g.start,g.end)+" · "+g.title+(g.state?" ("+g.state+")":"")))))}
+    box.append(e);return;
+  }
+  const slice=list.slice(0,SHOWN);
+  const groups=new Map();
+  slice.forEach(g=>{if(!groups.has(g.start))groups.set(g.start,[]);groups.get(g.start).push(g)});
+  for(const[d,gs]of groups){
+    const total=list.filter(x=>x.start===d).length;
+    box.append(el("section",{class:"day"},el("h2",{},fmtDay(d),el("small",{},total+(total===1?" listing":" listings"))),gs.map(row)));
+  }
+  if(list.length>SHOWN)box.append(el("button",{type:"button",class:"more",onclick:()=>{SHOWN+=PAGE;render()}},"Show "+Math.min(PAGE,list.length-SHOWN)+" more of "+(list.length-SHOWN).toLocaleString()+" remaining"));
+}
+
+function renderMeta(){
+  const st=$("stats");st.textContent="";
+  const cnt=lvl=>GAMES.filter(g=>g.level===lvl).length;
+  const d1=cnt("D1"),d2=cnt("D2"),jc=cnt("JUCO");
+  const loaded=(META&&META.loaded)||{};
+  const nD1=(loaded.D1||[]).length,nJ=(loaded.JUCO||[]).length;
+  st.append(el("span",{},el("b",{},d1.toLocaleString())," NCAA D1 listings"));
+  if(d2)st.append(el("span",{},el("b",{},d2.toLocaleString())," D2"));
+  st.append(el("span",{},el("b",{},jc.toLocaleString())," JUCO listings"));
+  st.append(el("span",{},el("b",{},String(nD1))," D1 programs loaded · ",el("b",{},String(nJ))," JUCO"));
+  const u=$("updated");
+  if(META&&META.updatedAt)u.textContent="Last refreshed "+new Date(META.updatedAt).toLocaleDateString("en-US",{month:"short",day:"numeric",year:"numeric"})+". "+(META.note||"");
+  else if(LOAD_STATE==="off")u.textContent="Schedule data unavailable in this view.";
+  else u.textContent="";
+  const ll=$("loadedlist");ll.textContent="";
+  const parts=[];
+  if(loaded.D1&&loaded.D1.length)parts.push("NCAA D1 (full or partial schedule): "+loaded.D1.join(", ")+".");
+  if(loaded.conf&&loaded.conf.length)parts.push("Conference slates loaded: "+loaded.conf.join(", ")+".");
+  parts.push(loaded.JUCO&&loaded.JUCO.length?"JUCO: "+loaded.JUCO.join(", ")+".":"JUCO: none posted yet. Junior college schedules usually appear December–January.");
+  ll.textContent=parts.join(" ");
+}
+
+function update(){SHOWN=PAGE;syncControls();render()}
+
+/* ---------- Reliance view ---------- */
+let REL=[], RELSET=new Set(), RELLABEL={}, RELPICK=new Set(), RELRANGE="season", RELSHOWN=PAGE, RELVS=false;
+const relHits=g=>g.teams.filter(t=>RELSET.has(t)).length;
+const LVL_NAME={D1:"NCAA D1",D2:"NCAA D2",JUCO:"Junior college",NAIA:"NAIA",HS:"High school"};
+const RANGES=[["season","Full season",null,null],["opening","Opening weekend",OPENING[0],OPENING[1]],["feb","February","2027-02-01","2027-02-28"],["mar","March","2027-03-01","2027-03-31"],["apr","April","2027-04-01","2027-04-30"],["may","May","2027-05-01","2027-05-31"],["post","Postseason","2027-06-01","2027-06-30"]];
+function setRel(list){REL=list||[];RELSET=new Set(REL.map(s=>s.team));RELLABEL=Object.fromEntries(REL.map(s=>[s.team,s.label]))}
+function relCount(team){return GAMES.filter(g=>g.teams.includes(team)).length}
+function renderRel(){
+  const ro=$("roster");ro.textContent="";
+  if(!REL.length){ro.append(el("p",{class:"relnote"},LOAD_STATE==="off"?"Roster unavailable right now.":"Loading the Reliance roster…"))}
+  REL.forEach(s=>{const n=relCount(s.team);const untracked=s.level==="HS"||s.level==="NAIA";
+    ro.append(el("button",{type:"button",class:"school","aria-pressed":RELPICK.has(s.team)?"true":"false",onclick:()=>{RELPICK.has(s.team)?RELPICK.delete(s.team):RELPICK.add(s.team);RELSHOWN=PAGE;renderRel()}},
+      el("span",{class:"lv"},LVL_NAME[s.level]||s.level),el("b",{},s.label),el("span",{class:"pl"},s.place||""),
+      el("span",{class:"ct"+(n?"":" none")},n?n+(n===1?" listing":" listings"):(untracked?"Not tracked yet":"2027 schedule not posted"))))});
+  const rg=$("rel-ranges");rg.textContent="";
+  RANGES.forEach(([k,lab])=>rg.append(el("button",{type:"button",class:"try","aria-pressed":RELRANGE===k?"true":"false",onclick:()=>{RELRANGE=k;RELSHOWN=PAGE;renderRel()}},lab)));
+  const [,rlab,from,to]=RANGES.find(r=>r[0]===RELRANGE);
+  const pick=RELPICK.size?RELPICK:RELSET;
+  const base=GAMES.filter(g=>g.teams.some(t=>pick.has(t))&&(!from||g.end>=from)&&(!to||g.start<=to));
+  const vsN=base.filter(g=>relHits(g)>=2).length;
+  rg.append(el("button",{type:"button",class:"try vs","aria-pressed":RELVS?"true":"false",onclick:()=>{RELVS=!RELVS;RELSHOWN=PAGE;renderRel()}},"Client vs. client ("+vsN+")"));
+  const list=(RELVS?base.filter(g=>relHits(g)>=2):base).sort((a,b)=>a.start.localeCompare(b.start)||a.title.localeCompare(b.title));
+  const rd=$("rel-reading");rd.textContent="";
+  rd.append(el("span",{class:"chip"},"Schools: ",el("b",{},RELPICK.size?[...RELPICK].map(t=>RELLABEL[t]||t).join(", "):"All "+REL.length)));
+  if(RELRANGE!=="season")rd.append(el("span",{class:"chip"},"Dates: ",el("b",{},rlab)));
+  if(RELVS)rd.append(el("span",{class:"chip"},el("b",{},"Client vs. client only")));
+  if(RELPICK.size||RELRANGE!=="season"||RELVS)rd.append(el("button",{type:"button",class:"clear",onclick:()=>{RELPICK.clear();RELRANGE="season";RELVS=false;renderRel()}},"Reset"));
+  rd.append(el("span",{class:"count"},list.length.toLocaleString()+(list.length===1?" listing":" listings")));
+  const box=$("rel-results");box.textContent="";
+  if(!list.length){box.append(el("div",{class:"empty"},el("h3",{},REL.length?(RELVS?"No client-vs-client matchups listed for that":"No listed games for that"):"Loading…"),el("p",{},"Schedules are added as each program posts its 2027 slate.")))}
+  else{const slice=list.slice(0,RELSHOWN);const groups=new Map();
+    slice.forEach(g=>{if(!groups.has(g.start))groups.set(g.start,[]);groups.get(g.start).push(g)});
+    for(const[d,gs]of groups){const total=list.filter(x=>x.start===d).length;
+      box.append(el("section",{class:"day"},el("h2",{},fmtDay(d),el("small",{},total+(total===1?" listing":" listings"))),gs.map(row)))}
+    if(list.length>RELSHOWN)box.append(el("button",{type:"button",class:"more",onclick:()=>{RELSHOWN+=PAGE;renderRel()}},"Show "+Math.min(PAGE,list.length-RELSHOWN)+" more of "+(list.length-RELSHOWN).toLocaleString()+" remaining"))}
+  const hs=REL.filter(s=>s.level==="HS"||s.level==="NAIA").map(s=>s.label);
+  $("rel-note").textContent=hs.length?"High school and NAIA schedules ("+hs.join(", ")+") aren’t part of the schedule database yet, so those schools show no games for now.":"";
+}
+function showView(){const rel=location.hash==="#reliance";$("view-all").hidden=rel;$("view-rel").hidden=!rel;
+  $("tab-all").setAttribute("aria-current",rel?"false":"page");$("tab-rel").setAttribute("aria-current",rel?"page":"false");if(rel)renderRel()}
+window.addEventListener("hashchange",showView);
+
+/* ---------- controls ---------- */
+const TRIES=["Georgia this weekend","Opening weekend","SEC games in Georgia","Florida in March","Vanderbilt","Big 12 in Texas in April","JUCO in Georgia"];
+TRIES.forEach(t=>$("tries").append(el("button",{type:"button",class:"try",onclick:()=>{$("q").value=t;runQuery(t)}},t)));
+function runQuery(t){F=parseQuery(t);if(!F.state&&!F.team&&!F.from&&!F.level&&!F.conf&&!F.text&&t.trim())F.text=t.trim().toLowerCase();update()}
+$("qform").addEventListener("submit",e=>{e.preventDefault();runQuery($("q").value)});
+$("f-state").addEventListener("change",e=>{F.state=e.target.value;F.ambig=null;update()});
+$("f-level").addEventListener("change",e=>{F.level=e.target.value;update()});
+$("f-conf").addEventListener("change",e=>{F.conf=e.target.value;update()});
+$("f-team").addEventListener("change",e=>{F.team=e.target.value.trim();F.ambig=null;update()});
+$("f-from").addEventListener("change",e=>{F.from=e.target.value;F.label="";if(F.to&&F.to<F.from)F.to=F.from;update()});
+$("f-to").addEventListener("change",e=>{F.to=e.target.value;F.label="";if(!F.from)F.from=F.to;update()});
+
+render();renderMeta();showView();
+
+/* ---------- data ---------- */
+(async()=>{
+  try{
+    const r=await fetch("data.json",{cache:"no-cache"});
+    if(!r.ok)throw new Error(r.status);
+    const D=await r.json();
+    HOSTS={d1:D.d1||[],juco:D.juco||[]};META=D.meta||null;setRel((D.reliance&&D.reliance.schools)||[]);
+    GAMES=flatten();LOAD_STATE=GAMES.length?"ready":"empty";
+  }catch(e){LOAD_STATE="off"}
+  fillControls();syncControls();render();renderMeta();renderRel();showView();
+})();
+</script>
+
+</body></html>
