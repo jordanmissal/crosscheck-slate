@@ -3,13 +3,12 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@600;800&family=Public+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
-
 <style>
 /* Layout: one-column scouting ledger. Query bar, filter row, interpreted-filter chips, results grouped by date like a lineup card. */
 :root{
   --bg:#eef2f0; --surface:#ffffff; --ink:#14211c; --muted:#5b6a64; --line:#d3dcd8;
   --accent:#1d6a4a; --accent-ink:#ffffff; --accent-soft:#dcece4;
-  --tba:#8a5a00; --tba-soft:#fbefd6; --link:#1d5a8a; --juco:#6a3d8f;
+  --tba:#8a5a00; --tba-soft:#fbefd6; --link:#1d5a8a; --juco:#6a3d8f; --hs:#a3412a;
   --f-display:"Big Shoulders Display","Oswald","Arial Narrow",Impact,sans-serif;
   --f-body:"Public Sans",system-ui,-apple-system,"Segoe UI",sans-serif;
   --f-mono:"IBM Plex Mono",ui-monospace,SFMono-Regular,Menlo,monospace;
@@ -17,11 +16,11 @@
 @media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
   --bg:#0f1714; --surface:#16211d; --ink:#e4ece8; --muted:#94a59e; --line:#2a3a33;
   --accent:#4fb88a; --accent-ink:#06120d; --accent-soft:#1b3329;
-  --tba:#f0bf5c; --tba-soft:#33280f; --link:#7db8e8; --juco:#c9a3ea; color-scheme:dark}}
+  --tba:#f0bf5c; --tba-soft:#33280f; --link:#7db8e8; --juco:#c9a3ea; --hs:#f0a088; color-scheme:dark}}
 :root[data-theme="dark"]{
   --bg:#0f1714; --surface:#16211d; --ink:#e4ece8; --muted:#94a59e; --line:#2a3a33;
   --accent:#4fb88a; --accent-ink:#06120d; --accent-soft:#1b3329;
-  --tba:#f0bf5c; --tba-soft:#33280f; --link:#7db8e8; --juco:#c9a3ea; color-scheme:dark}
+  --tba:#f0bf5c; --tba-soft:#33280f; --link:#7db8e8; --juco:#c9a3ea; --hs:#f0a088; color-scheme:dark}
 
 *{box-sizing:border-box}
 body{background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:15px;line-height:1.45;margin:0}
@@ -93,7 +92,7 @@ details.loaded summary{cursor:pointer;color:var(--link)}
 details.loaded p{margin-top:6px}
 @media (prefers-reduced-motion:no-preference){.row{animation:in .18s ease-out both}@keyframes in{from{opacity:.4}to{opacity:1}}}
 .tabs{display:flex;gap:4px;border-bottom:2px solid var(--line)}
-.tabs a{white-space:nowrap;font-family:var(--f-display);font-weight:600;font-size:18px;letter-spacing:.03em;text-transform:uppercase;padding:8px 14px 6px;color:var(--muted);text-decoration:none;border-bottom:3px solid transparent;margin-bottom:-2px}
+.tabs a{font-family:var(--f-display);font-weight:600;font-size:18px;letter-spacing:.03em;text-transform:uppercase;padding:8px 14px 6px;color:var(--muted);text-decoration:none;border-bottom:3px solid transparent;margin-bottom:-2px}
 .tabs a[aria-current=page]{color:var(--ink);border-bottom-color:var(--accent)}
 .tabs a:hover{color:var(--ink)}
 .view{display:flex;flex-direction:column;gap:16px}
@@ -121,11 +120,18 @@ details.loaded p{margin-top:6px}
 .near .nmsg{font-size:13px;color:var(--muted)}
 .near .nclear{font:inherit;font-size:13px;border:0;background:none;color:var(--link);cursor:pointer;text-decoration:underline;padding:0}
 .tag.dist{color:var(--ink);border-color:var(--ink)}
+.scope{display:flex;flex-wrap:wrap;align-items:center;gap:10px}
+.seg{display:inline-flex;border:1.5px solid var(--line);border-radius:10px;overflow:hidden;background:var(--surface)}
+.seg button{font:inherit;font-weight:600;font-size:14px;padding:8px 14px;border:0;background:transparent;color:var(--muted);cursor:pointer}
+.seg button+button{border-left:1.5px solid var(--line)}
+.seg button[aria-pressed=true]{background:var(--accent);color:var(--accent-ink)}
+.scope .hint{font-size:13px;color:var(--muted)}
+.tag.lvl.hs{color:var(--hs);border-color:var(--hs)}
 </style>
 
 <div class="wrap">
   <header>
-    <div class="eyebrow">2027 season · NCAA &amp; Junior College</div>
+    <div class="eyebrow">2027 season · NCAA, Junior College &amp; High School</div>
     <h1>Crosscheck Slate</h1>
     <p class="sub">Ask in plain words, like “Georgia this weekend,” “SEC games in Florida in April,” “within 50 miles of 30303” or “Vanderbilt March 5-7.” Games are added as programs post their 2027 schedules.</p>
   </header>
@@ -141,6 +147,7 @@ details.loaded p{margin-top:6px}
   </form>
 
   <div class="view" id="view-all">
+  <div class="scope"><div class="seg" role="group" aria-label="Show games for"><button type="button" data-scope="college">Colleges</button><button type="button" data-scope="hs">High schools</button><button type="button" data-scope="all">All</button></div><span class="hint" id="scopehint"></span></div>
   <form class="q" id="qform" autocomplete="off">
     <input id="q" type="search" placeholder="Georgia this weekend" aria-label="Search games">
     <button type="submit">Find</button>
@@ -150,7 +157,7 @@ details.loaded p{margin-top:6px}
 
   <div class="filters">
     <label for="f-state">State<select id="f-state"><option value="">Any</option></select></label>
-    <label for="f-level">Level<select id="f-level"><option value="">Any</option><option value="D1">NCAA D1</option><option value="D2">NCAA D2</option><option value="JUCO">JUCO</option></select></label>
+    <label for="f-level" id="lvl-label">Level<select id="f-level"><option value="">Any</option><option value="D1">NCAA D1</option><option value="D2">NCAA D2</option><option value="JUCO">JUCO</option></select></label>
     <label for="f-conf">Conference<select id="f-conf"><option value="">Any</option></select></label>
     <label for="f-team">Team<input id="f-team" list="teamlist" placeholder="Any"></label>
     <label for="f-from">From<input id="f-from" type="date"></label>
@@ -191,6 +198,9 @@ const STOP=new Set("show me all the games game any in at on for of around across
 const PAGE=150;
 
 let GAMES=[], META=null, HOSTS={d1:[],juco:[]}, TEAMCONF={}, LOAD_STATE="loading", SHOWN=PAGE;
+/* High school data loads one state at a time, only when the High schools or All view needs it. */
+let SCOPE="college", HS={}, HSSTATE={}, HSINDEX=null, HSLOADER=null;
+try{const s=localStorage.getItem("crosscheck-scope");if(["college","hs","all"].includes(s))SCOPE=s}catch(e){}
 const blank=()=>({state:"",team:"",conf:"",from:"",to:"",level:"",text:"",ambig:null,label:""});
 let F=blank();
 
@@ -221,6 +231,8 @@ function parseQuery(raw){
     if(m.length===3){out.nearZip=m[2];out.nearMi=+m[1]}else out.nearZip=m[1];eat(new RegExp(esc(m[0]),"g"));
   }
 
+  if(/\b(high schools?|hs|prep|preps|varsity)\b/.test(q)){out.scope="hs";eat(/\b(high schools?|hs|prep|preps|varsity)\b/g)}
+  else if(/\b(colleges?|college baseball)\b/.test(q)){out.scope="college";eat(/\b(colleges?|college baseball)\b/g)}
   if(/\b(juco|jucos|junior colleges?|jc|njcaa)\b/.test(q)){out.level="JUCO";eat(/\b(juco|jucos|junior colleges?|jc|njcaa)\b/g)}
   else if(/\b(d1|d-1|division i|division 1)\b/.test(q)){out.level="D1";eat(/\b(d1|d-1|division i|division 1)\b/g)}
   else if(/\b(d2|d-2|division ii|division 2)\b/.test(q)){out.level="D2";eat(/\b(d2|d-2|division ii|division 2)\b/g)}
@@ -278,13 +290,14 @@ function parseQuery(raw){
 }
 
 /* ---------- data shaping ---------- */
+function hostGroups(){const g=[["d1",HOSTS.d1],["juco",HOSTS.juco]];for(const st in HS)g.push(["hs",HS[st]]);return g}
 function flatten(){
   const rows=[];TEAMCONF={};
-  for(const lvlKey of ["d1","juco"]){
-    for(const h of HOSTS[lvlKey]){if(h.kind==="school"&&h.conf)TEAMCONF[h.name]=h.conf}
+  for(const[,list]of hostGroups()){
+    for(const h of list){if(h.kind==="school"&&h.conf)TEAMCONF[h.name]=h.conf}
   }
-  for(const lvlKey of ["d1","juco"]){
-    for(const h of HOSTS[lvlKey]){
+  for(const[lvlKey,list]of hostGroups()){
+    for(const h of list){
       const srcs=h.srcs||[];
       for(const g of (h.games||[])){
         if(!g.s)continue;
@@ -292,7 +305,7 @@ function flatten(){
         if(g.a){teams=[g.a,g.h];title=g.a+" at "+g.h;home=g.h}
         else if(g.title){teams=[];title=g.title}
         else{teams=g.t||[];title=teams.length===2?teams[0]+" vs. "+teams[1]:(teams[0]||"")+(g.ev?" · "+g.ev.replace(/\s*\((opponents?|field) TBA\)/i,""):"")}
-        const level=g.lvl||(h.kind==="school"?(h.level||(lvlKey==="juco"?"JUCO":"D1")):(lvlKey==="juco"?"JUCO":"D1"));
+        const level=lvlKey==="hs"?"HS":(g.lvl||(h.kind==="school"?(h.level||(lvlKey==="juco"?"JUCO":"D1")):(lvlKey==="juco"?"JUCO":"D1")));
         const confs=[...new Set(teams.map(t=>TEAMCONF[t]).filter(Boolean))];
         const s=srcs[g.src]||null;
         rows.push({start:g.s,end:g.e||g.s,title,teams,home,venue:h.venue||null,city:h.city||"",state:h.state||"",country:h.country||null,
@@ -305,7 +318,9 @@ function flatten(){
 }
 
 /* ---------- filtering ---------- */
+const inScope=g=>SCOPE==="all"||(SCOPE==="hs"?g.level==="HS":g.level!=="HS");
 function matches(g,f,ignoreDates){
+  if(!inScope(g))return false;
   if(!nearOk(g))return false;
   if(f.level&&g.level!==f.level)return false;
   if(f.state&&g.state!==f.state)return false;
@@ -323,15 +338,16 @@ function el(tag,attrs,...kids){const e=document.createElement(tag);for(const k i
 
 function syncControls(){$("f-state").value=F.state;$("f-level").value=F.level;$("f-conf").value=F.conf;$("f-team").value=F.team;$("f-from").value=F.from;$("f-to").value=F.to}
 function fillControls(){
-  const used=new Set(GAMES.map(g=>g.state));
+  const used=new Set(GAMES.filter(inScope).map(g=>g.state));
+  if(SCOPE!=="college"&&HSINDEX&&HSINDEX.states)Object.keys(HSINDEX.states).forEach(s=>used.add(s));
   const ss=$("f-state");ss.length=1;
   STATES.filter(([a])=>used.has(a)).sort((x,y)=>x[1].localeCompare(y[1])).forEach(([a,n])=>ss.append(el("option",{value:a},n)));
   if(F.state&&!used.has(F.state))ss.append(el("option",{value:F.state},ST_NAME[F.state]||F.state));
   const cs=$("f-conf");cs.length=1;
-  const confs=[...new Set(Object.values(TEAMCONF))].sort();
+  const confs=[...new Set(GAMES.filter(inScope).flatMap(g=>g.confs))].sort();
   confs.forEach(c=>cs.append(el("option",{value:c},c)));
   if(F.conf&&!confs.includes(F.conf))cs.append(el("option",{value:F.conf},F.conf));
-  const dl=$("teamlist");dl.textContent="";allTeams().sort().forEach(t=>dl.append(el("option",{value:t})));
+  const dl=$("teamlist");dl.textContent="";[...new Set(GAMES.filter(inScope).flatMap(g=>g.teams))].sort().forEach(t=>dl.append(el("option",{value:t})));
 }
 
 function renderReading(n){
@@ -352,7 +368,7 @@ function renderReading(n){
 
 function row(g){
   const tags=[];
-  tags.push(el("span",{class:"tag lvl"+(g.level==="JUCO"?" juco":"")},g.level==="JUCO"?"JUCO":"NCAA "+g.level));
+  tags.push(el("span",{class:"tag lvl"+(g.level==="JUCO"?" juco":g.level==="HS"?" hs":"")},g.level==="JUCO"?"JUCO":g.level==="HS"?"High school":"NCAA "+g.level));
   g.confs.forEach(c=>tags.push(el("span",{class:"tag"},c)));
   if(g.n>1)tags.push(el("span",{class:"tag"},g.n+"-game series"));
   if(g.neutral)tags.push(el("span",{class:"tag"},"Neutral site"));
@@ -373,20 +389,36 @@ function row(g){
       el("div",{class:"tags"},tags)));
 }
 
+function hsNeeded(){if(SCOPE==="college")return[];if(F.state)return[F.state];if(nearOn())return statesNear();return[]}
+function hsPending(){return hsNeeded().some(s=>HSSTATE[s]==="loading")}
+function renderScope(){
+  document.querySelectorAll(".seg button").forEach(b=>b.setAttribute("aria-pressed",String(b.dataset.scope===SCOPE)));
+  $("lvl-label").hidden=SCOPE==="hs";
+  const need=hsNeeded(),hint=$("scopehint");
+  if(SCOPE==="college"){hint.textContent="";return}
+  if(!HSLOADER){hint.textContent="High school data isn’t available in this view.";return}
+  if(!need.length){hint.textContent=SCOPE==="hs"?"Pick a state or enter a ZIP to load high school games.":"High school games appear once you pick a state or ZIP.";return}
+  if(hsPending()){hint.textContent="Loading high school games…";return}
+  const n=need.filter(s=>HSSTATE[s]==="ready"&&HS[s]&&HS[s].length).length;
+  hint.textContent=n?"":"No 2027 high school schedules posted yet for "+need.map(s=>ST_NAME[s]||s).join(", ")+".";
+}
 function render(){
+  renderScope();
+  if(SCOPE==="hs"&&GAMES.length&&!hsNeeded().length){renderReading(0);const box=$("results");box.textContent="";
+    box.append(el("div",{class:"empty"},el("h3",{},"Choose where to look"),el("p",{},"High school schedules load one state at a time. Pick a state above, enter a ZIP in Near ZIP, or ask something like “high school games in Georgia this weekend.”")));return}
   const list=GAMES.filter(g=>matches(g,F)).sort((a,b)=>a.start.localeCompare(b.start)||a.state.localeCompare(b.state)||a.title.localeCompare(b.title));
   renderReading(list.length);
   const box=$("results");box.textContent="";
   if(!GAMES.length){
     const msg={loading:["Loading schedules…","Pulling the latest posted 2027 games."],
-      off:["Couldn’t reach the schedule data","Please refresh the page in a minute."],
+      off:["Couldn’t reach the schedule data","Open this page from claude.ai while signed in to load the shared schedule."],
       empty:["No games loaded yet","Schedules are added here as programs publish them."]}[LOAD_STATE];
     box.append(el("div",{class:"empty"},el("h3",{},msg[0]),el("p",{},msg[1])));return;
   }
   if(!list.length){
     const later=GAMES.filter(g=>matches(g,F,true)&&(!F.to||g.start>F.to)).sort((a,b)=>a.start.localeCompare(b.start)).slice(0,5);
     const e=el("div",{class:"empty"},el("h3",{},"Nothing on the slate for that"),
-      el("p",{},(F.from&&F.to&&F.to<"2027-02-01"?"The 2027 season opens Feb. 19. ":"")+"Many 2027 schedules aren’t posted yet, so this list grows each week."));
+      el("p",{},SCOPE==="hs"&&hsPending()?"Loading high school games…":(F.from&&F.to&&F.to<"2027-02-01"?"The 2027 season opens Feb. 19. ":"")+"Many 2027 schedules aren’t posted yet, so this list grows each week."));
     if(later.length){e.append(el("p",{},"Next matching dates:"));
       e.append(el("div",{class:"next"},later.map(g=>el("button",{type:"button",onclick:()=>{F.from=g.start;F.to=g.end;F.label="";update()}},fmtRange(g.start,g.end)+" · "+g.title+(g.state?" ("+g.state+")":"")))))}
     box.append(e);return;
@@ -411,6 +443,8 @@ function renderMeta(){
   if(d2)st.append(el("span",{},el("b",{},d2.toLocaleString())," D2"));
   st.append(el("span",{},el("b",{},jc.toLocaleString())," JUCO listings"));
   st.append(el("span",{},el("b",{},String(nD1))," D1 programs loaded · ",el("b",{},String(nJ))," JUCO"));
+  if(HSINDEX&&HSINDEX.states){let hg=0,hsch=0;for(const k in HSINDEX.states){hg+=HSINDEX.states[k].games||0;hsch+=HSINDEX.states[k].schools||0}
+    if(hg)st.append(el("span",{},el("b",{},hg.toLocaleString())," high school listings · ",el("b",{},hsch.toLocaleString())," schools"))}
   const u=$("updated");
   if(META&&META.updatedAt)u.textContent="Last refreshed "+new Date(META.updatedAt).toLocaleDateString("en-US",{month:"short",day:"numeric",year:"numeric"})+". "+(META.note||"");
   else if(LOAD_STATE==="off")u.textContent="Schedule data unavailable in this view.";
@@ -420,10 +454,24 @@ function renderMeta(){
   if(loaded.D1&&loaded.D1.length)parts.push("NCAA D1 (full or partial schedule): "+loaded.D1.join(", ")+".");
   if(loaded.conf&&loaded.conf.length)parts.push("Conference slates loaded: "+loaded.conf.join(", ")+".");
   parts.push(loaded.JUCO&&loaded.JUCO.length?"JUCO: "+loaded.JUCO.join(", ")+".":"JUCO: none posted yet. Junior college schedules usually appear December–January.");
+  const hsSt=HSINDEX&&HSINDEX.states?Object.keys(HSINDEX.states).filter(k=>HSINDEX.states[k].schools).sort():[];
+  parts.push(hsSt.length?"High school (schools per state): "+hsSt.map(k=>(ST_NAME[k]||k)+" "+HSINDEX.states[k].schools).join(", ")+".":"High school: none loaded yet. Most 2027 high school schedules appear in January and February.");
   ll.textContent=parts.join(" ");
 }
 
-function update(){SHOWN=PAGE;syncControls();render()}
+function update(){SHOWN=PAGE;syncControls();ensureHs(hsNeeded());fillControls();syncControls();render()}
+function regames(){GAMES=flatten();fillControls();syncControls();render();renderMeta();if(location.hash==="#reliance")renderRel()}
+function ensureHs(states){
+  if(!HSLOADER)return;
+  states.filter(s=>s&&s!=="INTL"&&!HSSTATE[s]).forEach(s=>{
+    HSSTATE[s]="loading";
+    HSLOADER(s).then(list=>{HS[s]=list||[];HSSTATE[s]="ready";regames()})
+      .catch(()=>{HSSTATE[s]="error";regames()});
+  });
+}
+function setScope(s){SCOPE=s;try{localStorage.setItem("crosscheck-scope",s)}catch(e){}
+  if(s==="hs"&&F.level)F.level="";update()}
+document.querySelectorAll(".seg button").forEach(b=>b.addEventListener("click",()=>setScope(b.dataset.scope)));
 
 /* ---------- distance ---------- */
 let NEAR={zip:"",mi:50,lat:null,lon:null}, GEO=null, GEOP=null;
@@ -437,10 +485,14 @@ function haversine(a,b,c,d){const R=3958.8,r=Math.PI/180,x=Math.sin((c-a)*r/2),y
 function gameCoords(g){if(!GEO||!g.city||!g.state||g.state==="INTL")return null;return GEO.C.get(normCity(g.city)+"|"+g.state)||null}
 function distOf(g){if(NEAR.lat==null)return null;if(g._d!==undefined&&g._dk===NEAR.zip)return g._d;const c=gameCoords(g);g._dk=NEAR.zip;g._d=c?haversine(NEAR.lat,NEAR.lon,c[0],c[1]):null;return g._d}
 const nearOn=()=>NEAR.lat!=null;
+let NEARST={k:"",v:[]};
+function statesNear(){if(!GEO||!nearOn())return[];const k=NEAR.zip+"|"+NEAR.mi;if(NEARST.k===k)return NEARST.v;
+  const s=new Set();for(const[key,p]of GEO.C){const st=key.slice(key.lastIndexOf("|")+1);if(s.has(st))continue;if(haversine(NEAR.lat,NEAR.lon,p[0],p[1])<=NEAR.mi)s.add(st)}
+  NEARST={k,v:[...s].sort()};return NEARST.v}
 function nearOk(g){if(!nearOn())return true;const d=distOf(g);return d!=null&&d<=NEAR.mi}
 function syncNear(){$("nzip").value=NEAR.zip;document.querySelectorAll(".near .mi button").forEach(b=>b.setAttribute("aria-pressed",String(+b.dataset.mi===NEAR.mi)));$("nclear").hidden=!NEAR.zip}
 function saveNear(){try{localStorage.setItem("crosscheck-near",JSON.stringify({zip:NEAR.zip,mi:NEAR.mi}))}catch(e){}}
-function rerenderAll(){SHOWN=PAGE;RELSHOWN=PAGE;render();if(location.hash==="#reliance")renderRel()}
+function rerenderAll(){SHOWN=PAGE;RELSHOWN=PAGE;ensureHs(hsNeeded());fillControls();syncControls();render();if(location.hash==="#reliance")renderRel()}
 async function setNear(zip,mi){
   if(mi)NEAR.mi=mi;zip=(zip||"").trim();
   if(!zip){NEAR={zip:"",mi:NEAR.mi,lat:null,lon:null};$("nmsg").textContent="";syncNear();saveNear();rerenderAll();return}
@@ -464,11 +516,13 @@ const relHits=g=>g.teams.filter(t=>RELSET.has(t)).length;
 const LVL_NAME={D1:"NCAA D1",D2:"NCAA D2",JUCO:"Junior college",NAIA:"NAIA",HS:"High school"};
 const RANGES=[["season","Full season",null,null],["opening","Opening weekend",OPENING[0],OPENING[1]],["feb","February","2027-02-01","2027-02-28"],["mar","March","2027-03-01","2027-03-31"],["apr","April","2027-04-01","2027-04-30"],["may","May","2027-05-01","2027-05-31"],["post","Postseason","2027-06-01","2027-06-30"]];
 function setRel(list){REL=list||[];RELSET=new Set(REL.map(s=>s.team));RELLABEL=Object.fromEntries(REL.map(s=>[s.team,s.label]))}
+function relHsStates(){return[...new Set(REL.filter(s=>s.level==="HS").map(s=>((s.place||"").match(/,\s*([A-Z]{2})\s*$/)||[])[1]).filter(Boolean))]}
 function relCount(team){return GAMES.filter(g=>g.teams.includes(team)).length}
 function renderRel(){
+  ensureHs(relHsStates());
   const ro=$("roster");ro.textContent="";
-  if(!REL.length){ro.append(el("p",{class:"relnote"},LOAD_STATE==="off"?"Roster unavailable right now.":"Loading the Reliance roster…"))}
-  REL.forEach(s=>{const n=relCount(s.team);const untracked=s.level==="HS"||s.level==="NAIA";
+  if(!REL.length){ro.append(el("p",{class:"relnote"},LOAD_STATE==="off"?"Roster unavailable in this view.":"Loading the Reliance roster…"))}
+  REL.forEach(s=>{const n=relCount(s.team);const untracked=s.level==="NAIA";
     ro.append(el("button",{type:"button",class:"school","aria-pressed":RELPICK.has(s.team)?"true":"false",onclick:()=>{RELPICK.has(s.team)?RELPICK.delete(s.team):RELPICK.add(s.team);RELSHOWN=PAGE;renderRel()}},
       el("span",{class:"lv"},LVL_NAME[s.level]||s.level),el("b",{},s.label),el("span",{class:"pl"},s.place||""),
       el("span",{class:"ct"+(n?"":" none")},n?n+(n===1?" listing":" listings"):(untracked?"Not tracked yet":"2027 schedule not posted"))))});
@@ -494,17 +548,17 @@ function renderRel(){
     for(const[d,gs]of groups){const total=list.filter(x=>x.start===d).length;
       box.append(el("section",{class:"day"},el("h2",{},fmtDay(d),el("small",{},total+(total===1?" listing":" listings"))),gs.map(row)))}
     if(list.length>RELSHOWN)box.append(el("button",{type:"button",class:"more",onclick:()=>{RELSHOWN+=PAGE;renderRel()}},"Show "+Math.min(PAGE,list.length-RELSHOWN)+" more of "+(list.length-RELSHOWN).toLocaleString()+" remaining"))}
-  const hs=REL.filter(s=>s.level==="HS"||s.level==="NAIA").map(s=>s.label);
-  $("rel-note").textContent=hs.length?"High school and NAIA schedules ("+hs.join(", ")+") aren’t part of the schedule database yet, so those schools show no games for now.":"";
+  const na=REL.filter(s=>s.level==="NAIA").map(s=>s.label);
+  $("rel-note").textContent=na.length?"NAIA schedules ("+na.join(", ")+") aren’t part of the schedule database yet, so those schools show no games for now.":"";
 }
 function showView(){const rel=location.hash==="#reliance";$("view-all").hidden=rel;$("view-rel").hidden=!rel;
   $("tab-all").setAttribute("aria-current",rel?"false":"page");$("tab-rel").setAttribute("aria-current",rel?"page":"false");if(rel)renderRel()}
 window.addEventListener("hashchange",showView);
 
 /* ---------- controls ---------- */
-const TRIES=["Georgia this weekend","Opening weekend","SEC games in Georgia","Florida in March","Vanderbilt","Big 12 in Texas in April","JUCO in Georgia"];
+const TRIES=["Georgia this weekend","Opening weekend","SEC games in Georgia","Florida in March","Vanderbilt","JUCO in Georgia","High school games in Georgia"];
 TRIES.forEach(t=>$("tries").append(el("button",{type:"button",class:"try",onclick:()=>{$("q").value=t;runQuery(t)}},t)));
-function runQuery(t){F=parseQuery(t);if(F.nearZip){const mi=F.nearMi?[25,50,100].reduce((a,b)=>Math.abs(b-F.nearMi)<Math.abs(a-F.nearMi)?b:a):null;setNear(F.nearZip,mi)}if(!F.state&&!F.team&&!F.from&&!F.level&&!F.conf&&!F.text&&!F.nearZip&&t.trim())F.text=t.trim().toLowerCase();update()}
+function runQuery(t){F=parseQuery(t);if(F.scope){const sc=F.scope;delete F.scope;if(sc!==SCOPE){SCOPE=sc;try{localStorage.setItem("crosscheck-scope",sc)}catch(e){}}}if(F.nearZip){const mi=F.nearMi?[25,50,100].reduce((a,b)=>Math.abs(b-F.nearMi)<Math.abs(a-F.nearMi)?b:a):null;setNear(F.nearZip,mi)}if(!F.state&&!F.team&&!F.from&&!F.level&&!F.conf&&!F.text&&!F.nearZip&&!/\b(high schools?|hs|prep|preps|varsity|colleges?)\b/i.test(t)&&t.trim())F.text=t.trim().toLowerCase();update()}
 $("qform").addEventListener("submit",e=>{e.preventDefault();runQuery($("q").value)});
 $("f-state").addEventListener("change",e=>{F.state=e.target.value;F.ambig=null;update()});
 $("f-level").addEventListener("change",e=>{F.level=e.target.value;update()});
@@ -517,14 +571,15 @@ render();renderMeta();showView();
 
 /* ---------- data ---------- */
 (async()=>{
+  HSLOADER=async st=>{const r=await fetch("hs/"+st.toLowerCase()+".json",{cache:"no-cache"});if(r.status===404)return[];if(!r.ok)throw new Error(r.status);return r.json()};
   try{
-    const r=await fetch("data.json",{cache:"no-cache"});
-    if(!r.ok)throw new Error(r.status);
-    const D=await r.json();
-    HOSTS={d1:D.d1||[],juco:D.juco||[]};META=D.meta||null;setRel((D.reliance&&D.reliance.schools)||[]);
+    const r=await fetch("data.json",{cache:"no-cache"});if(!r.ok)throw new Error(r.status);
+    const d=await r.json();
+    HOSTS.d1=d.d1||[];HOSTS.juco=d.juco||[];META=d.meta||null;HSINDEX=d.hsindex||null;setRel((d.reliance&&d.reliance.schools)||[]);
     GAMES=flatten();LOAD_STATE=GAMES.length?"ready":"empty";
   }catch(e){LOAD_STATE="off"}
-  fillControls();syncControls();render();renderMeta();renderRel();showView();
+  ensureHs(hsNeeded());
+  fillControls();syncControls();render();renderMeta();if(location.hash==="#reliance")renderRel();
 })();
 </script>
 
