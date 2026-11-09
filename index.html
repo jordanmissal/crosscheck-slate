@@ -112,16 +112,33 @@ details.loaded p{margin-top:6px}
 @media (max-width:520px){.ranges .vs{margin-left:0}}
 .tag.rel{background:var(--accent);color:var(--accent-ink);border-color:transparent}
 .relnote{font-size:13px;color:var(--muted);margin:0;max-width:66ch}
+.near{display:flex;flex-wrap:wrap;align-items:center;gap:8px;background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:10px 12px}
+.near b{font-family:var(--f-mono);font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);font-weight:500}
+.near input{font:inherit;font-size:16px;width:7.5em;padding:7px 10px;border:1px solid var(--line);border-radius:8px;background:var(--bg);color:var(--ink)}
+.near .mi{display:flex;gap:4px}
+.near .mi button{font:inherit;font-size:13px;padding:6px 10px;border-radius:999px;border:1px solid var(--line);background:transparent;color:var(--ink);cursor:pointer}
+.near .mi button[aria-pressed=true]{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.near .nmsg{font-size:13px;color:var(--muted)}
+.near .nclear{font:inherit;font-size:13px;border:0;background:none;color:var(--link);cursor:pointer;text-decoration:underline;padding:0}
+.tag.dist{color:var(--ink);border-color:var(--ink)}
 </style>
 
 <div class="wrap">
   <header>
     <div class="eyebrow">2027 season · NCAA &amp; Junior College</div>
     <h1>Crosscheck Slate</h1>
-    <p class="sub">Ask in plain words, like “Georgia this weekend,” “SEC games in Florida in April” or “Vanderbilt March 5-7.” Games are added as programs post their 2027 schedules.</p>
+    <p class="sub">Ask in plain words, like “Georgia this weekend,” “SEC games in Florida in April,” “within 50 miles of 30303” or “Vanderbilt March 5-7.” Games are added as programs post their 2027 schedules.</p>
   </header>
 
   <nav class="tabs" aria-label="Views"><a href="#all" id="tab-all">All games</a><a href="#reliance" id="tab-rel">Reliance schools</a></nav>
+
+  <form class="near" id="nearform" autocomplete="off">
+    <b>Near ZIP</b>
+    <input id="nzip" inputmode="numeric" pattern="[0-9]{5}" maxlength="5" placeholder="30303" aria-label="Your ZIP code">
+    <div class="mi" role="group" aria-label="Distance"><button type="button" data-mi="25">25 mi</button><button type="button" data-mi="50">50 mi</button><button type="button" data-mi="100">100 mi</button></div>
+    <span class="nmsg" id="nmsg"></span>
+    <button type="button" class="nclear" id="nclear" hidden>Clear</button>
+  </form>
 
   <div class="view" id="view-all">
   <form class="q" id="qform" autocomplete="off">
@@ -200,6 +217,9 @@ function parseQuery(raw){
   let q=" "+raw.toLowerCase().replace(/[’']/g,"'").replace(/[^a-z0-9/'&\-. ]/g," ").replace(/\s+/g," ")+" ";
   const eat=re=>{q=q.replace(re," ")};
   const t=today0(); let m;
+  if((m=q.match(/\b(?:within\s+)?(\d{2,3})\s*(?:mi|miles?)\s+(?:of|from|around)\s+(\d{5})\b/))||(m=q.match(/\b(?:near|around|close to)\s+(\d{5})\b/))||(m=q.match(/\b(\d{5})\b/))){
+    if(m.length===3){out.nearZip=m[2];out.nearMi=+m[1]}else out.nearZip=m[1];eat(new RegExp(esc(m[0]),"g"));
+  }
 
   if(/\b(juco|jucos|junior colleges?|jc|njcaa)\b/.test(q)){out.level="JUCO";eat(/\b(juco|jucos|junior colleges?|jc|njcaa)\b/g)}
   else if(/\b(d1|d-1|division i|division 1)\b/.test(q)){out.level="D1";eat(/\b(d1|d-1|division i|division 1)\b/g)}
@@ -286,6 +306,7 @@ function flatten(){
 
 /* ---------- filtering ---------- */
 function matches(g,f,ignoreDates){
+  if(!nearOk(g))return false;
   if(f.level&&g.level!==f.level)return false;
   if(f.state&&g.state!==f.state)return false;
   if(f.conf&&!g.confs.includes(f.conf))return false;
@@ -324,7 +345,8 @@ function renderReading(n){
   if(F.conf)r.append(chip("Conference",F.conf,"conf"));
   if(F.level)r.append(chip("Level",{D1:"NCAA D1",D2:"NCAA D2",JUCO:"Junior college"}[F.level],"level"));
   if(F.text)r.append(chip("Words",F.text,"text"));
-  if(r.childNodes.length)r.append(el("button",{type:"button",class:"clear",onclick:()=>{F=blank();$("q").value="";update()}},"Clear all"));
+  if(nearOn())r.append(el("span",{class:"chip"},"Within: ",el("b",{},NEAR.mi+" mi of "+NEAR.zip),el("button",{type:"button","aria-label":"Remove distance",onclick:()=>setNear("")},"\u2715")));
+  if(r.childNodes.length)r.append(el("button",{type:"button",class:"clear",onclick:()=>{F=blank();$("q").value="";if(NEAR.zip)setNear("");update()}},"Clear all"));
   r.append(el("span",{class:"count"},n.toLocaleString()+(n===1?" listing":" listings")));
 }
 
@@ -336,6 +358,7 @@ function row(g){
   if(g.neutral)tags.push(el("span",{class:"tag"},"Neutral site"));
   if(g.tba)tags.push(el("span",{class:"tag tba"},"Opponent TBA"));
   if(g.src)tags.push(el("a",{class:"src",href:g.src.u,target:"_blank",rel:"noopener"},"Source: "+g.src.n));
+  if(nearOn()){const d=distOf(g);if(d!=null)tags.unshift(el("span",{class:"tag dist"},Math.round(d)+" mi away"))}
   const relHit=g.teams.filter(t=>RELSET.has(t));
   if(relHit.length)tags.unshift(el("span",{class:"tag rel"},"Reliance · "+relHit.map(t=>RELLABEL[t]||t).join(", ")));
   const multi=g.start!==g.end;
@@ -402,6 +425,39 @@ function renderMeta(){
 
 function update(){SHOWN=PAGE;syncControls();render()}
 
+/* ---------- distance ---------- */
+let NEAR={zip:"",mi:50,lat:null,lon:null}, GEO=null, GEOP=null;
+const normCity=c=>c.toLowerCase().replace(/saint /g,"st ").replace(/st\. /g,"st ").replace(/[.']/g,"").replace(/\s+/g," ").trim();
+function loadGeo(){if(GEOP)return GEOP;GEOP=fetch("geo.txt").then(r=>{if(!r.ok)throw new Error(r.status);return r.text()}).then(t=>{
+  const Z=new Map(),C=new Map();let tgt=null;
+  for(const line of t.split("\n")){if(line==="#Z"){tgt=Z;continue}if(line==="#C"){tgt=C;continue}if(!line||!tgt)continue;
+    const i=line.lastIndexOf(","),j=line.lastIndexOf(",",i-1);tgt.set(line.slice(0,j),[+line.slice(j+1,i),+line.slice(i+1)])}
+  GEO={Z,C};return GEO}).catch(e=>{GEOP=null;throw e});return GEOP}
+function haversine(a,b,c,d){const R=3958.8,r=Math.PI/180,x=Math.sin((c-a)*r/2),y=Math.sin((d-b)*r/2);return 2*R*Math.asin(Math.sqrt(x*x+Math.cos(a*r)*Math.cos(c*r)*y*y))}
+function gameCoords(g){if(!GEO||!g.city||!g.state||g.state==="INTL")return null;return GEO.C.get(normCity(g.city)+"|"+g.state)||null}
+function distOf(g){if(NEAR.lat==null)return null;if(g._d!==undefined&&g._dk===NEAR.zip)return g._d;const c=gameCoords(g);g._dk=NEAR.zip;g._d=c?haversine(NEAR.lat,NEAR.lon,c[0],c[1]):null;return g._d}
+const nearOn=()=>NEAR.lat!=null;
+function nearOk(g){if(!nearOn())return true;const d=distOf(g);return d!=null&&d<=NEAR.mi}
+function syncNear(){$("nzip").value=NEAR.zip;document.querySelectorAll(".near .mi button").forEach(b=>b.setAttribute("aria-pressed",String(+b.dataset.mi===NEAR.mi)));$("nclear").hidden=!NEAR.zip}
+function saveNear(){try{localStorage.setItem("crosscheck-near",JSON.stringify({zip:NEAR.zip,mi:NEAR.mi}))}catch(e){}}
+function rerenderAll(){SHOWN=PAGE;RELSHOWN=PAGE;render();if(location.hash==="#reliance")renderRel()}
+async function setNear(zip,mi){
+  if(mi)NEAR.mi=mi;zip=(zip||"").trim();
+  if(!zip){NEAR={zip:"",mi:NEAR.mi,lat:null,lon:null};$("nmsg").textContent="";syncNear();saveNear();rerenderAll();return}
+  if(!/^\d{5}$/.test(zip)){$("nmsg").textContent="Enter a 5-digit ZIP.";return}
+  NEAR.zip=zip;syncNear();$("nmsg").textContent="Finding games near "+zip+"…";
+  try{const G=await loadGeo();const p=G.Z.get(zip);
+    if(!p){NEAR.lat=NEAR.lon=null;$("nmsg").textContent="ZIP "+zip+" not found.";rerenderAll();return}
+    NEAR.lat=p[0];NEAR.lon=p[1];$("nmsg").textContent="";saveNear();rerenderAll();
+  }catch(e){$("nmsg").textContent="Couldn’t load distance data. Try again in a moment."}
+}
+$("nearform").addEventListener("submit",e=>{e.preventDefault();setNear($("nzip").value)});
+$("nzip").addEventListener("change",e=>setNear(e.target.value));
+$("nzip").addEventListener("input",e=>{const v=e.target.value.replace(/\D/g,"").slice(0,5);if(v!==e.target.value)e.target.value=v;if(v.length===5)setNear(v)});
+document.querySelectorAll(".near .mi button").forEach(b=>b.addEventListener("click",()=>{NEAR.mi=+b.dataset.mi;syncNear();saveNear();if(NEAR.zip&&nearOn())rerenderAll();else if($("nzip").value)setNear($("nzip").value)}));
+$("nclear").addEventListener("click",()=>setNear(""));
+(function(){let s=null;try{s=JSON.parse(localStorage.getItem("crosscheck-near")||"null")}catch(e){}if(s&&[25,50,100].includes(s.mi))NEAR.mi=s.mi;syncNear();if(s&&s.zip)setNear(s.zip)})();
+
 /* ---------- Reliance view ---------- */
 let REL=[], RELSET=new Set(), RELLABEL={}, RELPICK=new Set(), RELRANGE="season", RELSHOWN=PAGE, RELVS=false;
 const relHits=g=>g.teams.filter(t=>RELSET.has(t)).length;
@@ -420,7 +476,7 @@ function renderRel(){
   RANGES.forEach(([k,lab])=>rg.append(el("button",{type:"button",class:"try","aria-pressed":RELRANGE===k?"true":"false",onclick:()=>{RELRANGE=k;RELSHOWN=PAGE;renderRel()}},lab)));
   const [,rlab,from,to]=RANGES.find(r=>r[0]===RELRANGE);
   const pick=RELPICK.size?RELPICK:RELSET;
-  const base=GAMES.filter(g=>g.teams.some(t=>pick.has(t))&&(!from||g.end>=from)&&(!to||g.start<=to));
+  const base=GAMES.filter(g=>nearOk(g)&&g.teams.some(t=>pick.has(t))&&(!from||g.end>=from)&&(!to||g.start<=to));
   const vsN=base.filter(g=>relHits(g)>=2).length;
   rg.append(el("button",{type:"button",class:"try vs","aria-pressed":RELVS?"true":"false",onclick:()=>{RELVS=!RELVS;RELSHOWN=PAGE;renderRel()}},"Client vs. client ("+vsN+")"));
   const list=(RELVS?base.filter(g=>relHits(g)>=2):base).sort((a,b)=>a.start.localeCompare(b.start)||a.title.localeCompare(b.title));
@@ -428,6 +484,7 @@ function renderRel(){
   rd.append(el("span",{class:"chip"},"Schools: ",el("b",{},RELPICK.size?[...RELPICK].map(t=>RELLABEL[t]||t).join(", "):"All "+REL.length)));
   if(RELRANGE!=="season")rd.append(el("span",{class:"chip"},"Dates: ",el("b",{},rlab)));
   if(RELVS)rd.append(el("span",{class:"chip"},el("b",{},"Client vs. client only")));
+  if(nearOn())rd.append(el("span",{class:"chip"},"Within: ",el("b",{},NEAR.mi+" mi of "+NEAR.zip)));
   if(RELPICK.size||RELRANGE!=="season"||RELVS)rd.append(el("button",{type:"button",class:"clear",onclick:()=>{RELPICK.clear();RELRANGE="season";RELVS=false;renderRel()}},"Reset"));
   rd.append(el("span",{class:"count"},list.length.toLocaleString()+(list.length===1?" listing":" listings")));
   const box=$("rel-results");box.textContent="";
@@ -447,7 +504,7 @@ window.addEventListener("hashchange",showView);
 /* ---------- controls ---------- */
 const TRIES=["Georgia this weekend","Opening weekend","SEC games in Georgia","Florida in March","Vanderbilt","Big 12 in Texas in April","JUCO in Georgia"];
 TRIES.forEach(t=>$("tries").append(el("button",{type:"button",class:"try",onclick:()=>{$("q").value=t;runQuery(t)}},t)));
-function runQuery(t){F=parseQuery(t);if(!F.state&&!F.team&&!F.from&&!F.level&&!F.conf&&!F.text&&t.trim())F.text=t.trim().toLowerCase();update()}
+function runQuery(t){F=parseQuery(t);if(F.nearZip){const mi=F.nearMi?[25,50,100].reduce((a,b)=>Math.abs(b-F.nearMi)<Math.abs(a-F.nearMi)?b:a):null;setNear(F.nearZip,mi)}if(!F.state&&!F.team&&!F.from&&!F.level&&!F.conf&&!F.text&&!F.nearZip&&t.trim())F.text=t.trim().toLowerCase();update()}
 $("qform").addEventListener("submit",e=>{e.preventDefault();runQuery($("q").value)});
 $("f-state").addEventListener("change",e=>{F.state=e.target.value;F.ambig=null;update()});
 $("f-level").addEventListener("change",e=>{F.level=e.target.value;update()});
